@@ -1,0 +1,30 @@
+id: daily-sales-report
+namespace: ecommerce.farming
+description: Generate and send daily sales report
+tasks:
+  - id: fetch-sales-data
+    type: io.kestra.plugin.jdbc.Query
+    description: Fetch sales data for the day
+    properties:
+      url: jdbc:postgresql://db:5432/farming_db
+      user: postgres
+      password: password
+      fetch: true
+      sql: SELECT * FROM orders WHERE order_date = CURRENT_DATE;
+
+  - id: generate-report
+    type: io.kestra.core.tasks.scripts.Python
+    description: Generate sales report
+    properties:
+      script: |
+        sales_data = {{outputs.fetch-sales-data}}
+        report = f"Today's Sales:\n\n{sales_data}"
+        with open('/tmp/sales_report.txt', 'w') as file:
+            file.write(report)
+
+  - id: send-report
+    type: io.kestra.core.tasks.scripts.Bash
+    description: Send report via email
+    properties:
+      script: |
+        mail -s "Daily Sales Report" admin@example.com < /tmp/sales_report.txt

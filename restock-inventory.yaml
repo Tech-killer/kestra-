@@ -1,0 +1,35 @@
+id: restock-inventory
+namespace: ecommerce.farming
+description: Automatically restock inventory when product levels are low
+tasks:
+  - id: check-inventory
+    type: io.kestra.core.tasks.scripts.Python
+    description: Check inventory levels
+    properties:
+      script: |
+        import requests
+
+        product_id = "{{inputs.product_id}}"
+        response = requests.get(f"http://backend-service/api/inventory/{product_id}")
+        inventory = response.json()['inventory']
+        
+        if inventory < 10:
+            print("Low inventory detected")
+        else:
+            print("Inventory levels are sufficient")
+
+  - id: place-restock-order
+    type: io.kestra.core.tasks.scripts.Bash
+    description: Place restocking order if inventory is low
+    condition:
+      type: io.kestra.core.models.conditions.types.ExecutionCondition
+      with:
+        conditions:
+          - type: io.kestra.core.models.conditions.types.ExpressionCondition
+            expression: "{{ outputs.check-inventory == 'Low inventory detected' }}"
+    properties:
+      script: |
+        echo "Placing restock order for product {{inputs.product_id}}"
+inputs:
+  - name: product_id
+    type: STRING

@@ -1,0 +1,61 @@
+id: farming-ecommerce-workflow
+namespace: ecommerce.farming
+description: Workflow to handle e-commerce operations for a farming website
+tasks:
+  - id: notify-new-order
+    type: io.kestra.core.tasks.scripts.Bash
+    description: Send notification for a new order
+    properties:
+      script: |
+        echo "New order received for product {{inputs.product_name}} by customer {{inputs.customer_name}}"
+  
+  - id: update-inventory
+    type: io.kestra.core.tasks.scripts.Python
+    description: Update product inventory
+    properties:
+      script: |
+        import requests
+        
+        product_id = "{{inputs.product_id}}"
+        quantity = "{{inputs.quantity}}"
+        
+        response = requests.post(
+          url="http://backend-service/api/inventory",
+          json={"product_id": product_id, "quantity": quantity}
+        )
+        print(response.json())
+  
+  - id: process-payment
+    type: io.kestra.core.tasks.scripts.Bash
+    description: Process payment for the order
+    properties:
+      script: |
+        echo "Processing payment of ${{inputs.amount}} for customer {{inputs.customer_name}}"
+
+  - id: send-confirmation-email
+    type: io.kestra.core.tasks.scripts.Python
+    description: Send order confirmation email
+    properties:
+      script: |
+        import smtplib
+
+        recipient = "{{inputs.customer_email}}"
+        message = f"Subject: Order Confirmation\n\nDear {{inputs.customer_name}}, your order has been confirmed!"
+        
+        with smtplib.SMTP('smtp.example.com') as server:
+            server.login('your_email@example.com', 'your_password')
+            server.sendmail('your_email@example.com', recipient, message)
+
+inputs:
+  - name: product_name
+    type: STRING
+  - name: customer_name
+    type: STRING
+  - name: customer_email
+    type: STRING
+  - name: product_id
+    type: STRING
+  - name: quantity
+    type: INT
+  - name: amount
+    type: FLOAT

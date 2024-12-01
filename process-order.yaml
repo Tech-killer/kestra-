@@ -1,0 +1,50 @@
+id: process-order
+namespace: ecommerce.farming
+description: Workflow to process a new order
+tasks:
+  - id: validate-order
+    type: io.kestra.core.tasks.scripts.Python
+    description: Validate order details
+    properties:
+      script: |
+        import json
+
+        order = json.loads('{{inputs.order_data}}')
+        if order['quantity'] > 0:
+            print("Order is valid")
+        else:
+            raise Exception("Invalid order quantity")
+
+  - id: update-inventory
+    type: io.kestra.core.tasks.scripts.Python
+    description: Update inventory after order placement
+    properties:
+      script: |
+        import requests
+        
+        product_id = "{{inputs.product_id}}"
+        quantity = "{{inputs.quantity}}"
+        
+        response = requests.post(
+          url="http://backend-service/api/inventory",
+          json={"product_id": product_id, "quantity": -quantity}
+        )
+        print(response.json())
+
+  - id: send-notification
+    type: io.kestra.core.tasks.scripts.Bash
+    description: Notify admin about the new order
+    properties:
+      script: |
+        echo "Order {{inputs.order_id}} processed for {{inputs.customer_name}}"
+inputs:
+  - name: order_data
+    type: STRING
+  - name: product_id
+    type: STRING
+  - name: quantity
+    type: INT
+  - name: customer_name
+    type: STRING
+  - name: order_id
+    type: STRING
